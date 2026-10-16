@@ -3,10 +3,17 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 export async function POST(req) {
   try {
+    const apiKey = process.env.STRIPE_SECRET_KEY?.trim();
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Payments are not configured" },
+        { status: 503 }
+      );
+    }
+    const stripe = new Stripe(apiKey);
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -21,7 +28,6 @@ export async function POST(req) {
 
     // Create Stripe Checkout Session
     const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
